@@ -6,12 +6,15 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import javax.imageio.ImageIO;
+import javax.net.ssl.SSLPeerUnverifiedException;
+
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.impl.conn.DefaultClientConnection;
 import org.apache.http.util.EntityUtils;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
@@ -59,7 +62,7 @@ public class RequestMgr
   } 
   
   private String getIGramUrlStr() {
-    return "https://api.instagram.com/v1/tags/" + this.hashtag + "/media/recent?client_id=fbb13314c6b34723a09523ab3521acca";
+    return "https://api.instagram.com/v1/tags/" + this.hashtag + "/media/recent?client_id=749add4dc1c54a088c0b13a09057eb37";
   } 
   
   protected HttpResponse getHttpResponse(HttpClient client, HttpGet req) {
@@ -74,6 +77,10 @@ public class RequestMgr
     } catch (ClientProtocolException e) {
       this.logger.log("Could not make request Client Protocol Exception: " + e.getMessage());
       e.printStackTrace();
+    } catch (SSLPeerUnverifiedException e) {
+    	// at some point, the ssl connection gets messed up. refresh the client.
+        this.logger.log("SSL Connection Error. Recreating client.");
+    	this.client = new DefaultHttpClient();
     } catch (IOException e) {
       this.logger.log("Could not make request IO Exception: " + e.getMessage());
       e.printStackTrace();
@@ -89,9 +96,11 @@ public class RequestMgr
       content = EntityUtils.toString(entity);
     } catch (org.apache.http.ParseException e) {
       this.logger.log("Could not parse response content: " + e.getMessage());
+      this.logger.log("Content was: " + content);
       e.printStackTrace();
     } catch (IOException e) {
       this.logger.log("Could not read response content: " + e.getMessage());
+      this.logger.log("Content was: " + content);
       e.printStackTrace();
     } 
     
@@ -100,7 +109,9 @@ public class RequestMgr
       results = (JSONObject)this.json.parse(content);
     } catch (org.json.simple.parser.ParseException e) {
       this.logger.log("Could not parse json content: " + e.getMessage());
+      this.logger.log("Content was: " + content);
       e.printStackTrace();
+      return imageUrls;
     } 
     
     JSONArray data = (JSONArray)results.get("data");
