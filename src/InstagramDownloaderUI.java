@@ -1,13 +1,24 @@
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.KeyEvent;
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.io.PrintStream;
+import java.io.PrintWriter;
+import java.io.UnsupportedEncodingException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JMenu;
+import javax.swing.JMenuBar;
+import javax.swing.JMenuItem;
 import javax.swing.JTextField;
 
 public class InstagramDownloaderUI
@@ -29,6 +40,7 @@ public class InstagramDownloaderUI
   
   public InstagramDownloaderUI() {
     initComponents();
+    checkForConfigAndMaybeStart();
     setDefaultCloseOperation(3);
     setTitle("Instaprint - MVS");
   } 
@@ -36,6 +48,14 @@ public class InstagramDownloaderUI
   private void initComponents()
   {
     setLayout(null);
+    
+    JMenuBar menuBar = new JMenuBar();
+    JMenu menu = new JMenu("File");
+    JMenuItem menuItem = new JMenuItem("Save", KeyEvent.VK_T);
+    menuItem.addActionListener(this);
+    menu.add(menuItem);
+    menuBar.add(menu);
+    this.setJMenuBar(menuBar);
     
     JLabel label = new JLabel();
     label.setText("Hashtag:");
@@ -88,7 +108,7 @@ public class InstagramDownloaderUI
     this.toggle.setEnabled(false);
     add(this.toggle);
     
-    setSize(350, 130);
+    setSize(350, 150);
   } 
   
   public void toggleRunningState() {
@@ -102,7 +122,9 @@ public class InstagramDownloaderUI
       startRequestMgr();
     } else if ("chooseDir".equals(e.getActionCommand())) {
       handleStartOutputDirChoice();
-    } 
+    } else if ("Save".equals(e.getActionCommand())) {
+      saveConfig();
+    }
   } 
   
   private void startRequestMgr() {
@@ -142,4 +164,40 @@ public class InstagramDownloaderUI
       this.chosenOutputLabel.setText(this.outputDir.getPath());
     } 
   } 
+  
+  private void saveConfig() {
+	  PrintWriter writer;
+	try {
+		writer = new PrintWriter(System.getProperty("user.home") + "/igdownloader.config", "UTF-8");
+		writer.println(this.htField.getText());
+		writer.println(this.outputDir.getAbsolutePath());
+		writer.close();
+	} catch (FileNotFoundException | UnsupportedEncodingException e) {
+		e.printStackTrace();
+	}
+  }
+  
+  private void checkForConfigAndMaybeStart() {
+	  Path p = Paths.get(System.getProperty("user.home") + "/igdownloader.config");
+	  String config = null;
+	  try {
+	    	config = new String(Files.readAllBytes(p));
+	  } catch (IOException e) {
+		    return;
+	  }
+	  
+      String[] configParts = config.split(System.lineSeparator());
+		  
+	  if (configParts.length == 2) {
+		  String hashtag = configParts[0];
+		  String output = configParts[1];
+		  
+		  this.htField.setText(hashtag);
+		  this.chosenOutputLabel.setText(output);
+		  this.outputDir = new File(output);
+		  this.toggle.setEnabled(true);
+		  this.startRequestMgr();
+	  } 
+	  
+  }
 } 
